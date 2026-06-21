@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: auctom-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: auctom
+    ports:
+      - "5435:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  matching-service:
+    build:
+      context: ./matching-service
+    container_name: auctom-matching
+    restart: always
+    ports:
+      - "9091:9091"
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/auctom?sslmode=disable
+      - GO_API_URL=http://go-api:8080
+      - QUOTE_SERVICE_URL=http://quote-service:9092
+    depends_on:
+      - db
+
+  quote-service:
+    build:
+      context: ./quote-service
+    container_name: auctom-quote
+    restart: always
+    ports:
+      - "9092:9092"
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/auctom?sslmode=disable
+      - GO_API_URL=http://go-api:8080
+      - RECOMMENDER_SERVICE_URL=http://recommender-service:9093
+    depends_on:
+      - db
+
+  recommender-service:
+    build:
+      context: ./recommender-service
+    container_name: auctom-recommender
+    restart: always
+    ports:
+      - "9093:9093"
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/auctom?sslmode=disable
+      - GO_API_URL=http://go-api:8080
+    depends_on:
+      - db
+
+  go-api:
+    build:
+      context: ./go-api
+    container_name: auctom-go-api
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/auctom?sslmode=disable
+      - MATCHING_SERVICE_URL=http://matching-service:9091
+      - QUOTE_SERVICE_URL=http://quote-service:9092
+      - RECOMMENDER_SERVICE_URL=http://recommender-service:9093
+    depends_on:
+      - db
+      - matching-service
+      - quote-service
+      - recommender-service
+
+volumes:
+  pgdata:

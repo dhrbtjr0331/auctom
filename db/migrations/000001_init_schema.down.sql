@@ -1,0 +1,7 @@
+ALTER TABLE rfqs DROP CONSTRAINT IF EXISTS fk_awarded_quote;
+DROP TABLE IF EXISTS recommendations;
+DROP TABLE IF EXISTS quotes;
+DROP TABLE IF EXISTS rfq_matches;
+DROP TABLE IF EXISTS rfqs;
+DROP TABLE IF EXISTS supplier_profiles;
+DROP TABLE IF EXISTS users;

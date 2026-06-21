@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auctom | Manufacturing Procurement Platform</title>
+    <!-- Outfit Font for headers, Inter for UI -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="dark-theme">
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Background decorative glows -->
+    <div class="glow-sphere glow-sphere-1"></div>
+    <div class="glow-sphere glow-sphere-2"></div>
+
+    <header class="app-header">
+        <div class="logo-container">
+            <span class="logo-icon">▲</span>
+            <span class="logo-text">Auctom</span>
+            <span class="logo-badge">RFQ MVP</span>
+        </div>
+        <div class="header-actions">
+            <div id="user-info" class="user-info hidden">
+                <span class="user-role-badge" id="display-role">Buyer</span>
+                <span class="user-email" id="display-email">buyer@auctom.com</span>
+                <button id="logout-btn" class="btn btn-secondary btn-sm">Sign Out</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="app-container">
+        <!-- Auth Section -->
+        <section id="auth-section" class="auth-section">
+            <div class="auth-card">
+                <div class="auth-tabs">
+                    <button class="auth-tab-btn active" data-tab="login">Sign In</button>
+                    <button class="auth-tab-btn" data-tab="register">Register Company</button>
+                </div>
+
+                <div class="auth-form-container">
+                    <form id="auth-form">
+                        <div class="form-group">
+                            <label for="auth-email">Corporate Email</label>
+                            <input type="email" id="auth-email" required placeholder="name@company.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="auth-password">Password</label>
+                            <input type="password" id="auth-password" required placeholder="••••••••">
+                        </div>
+
+                        <!-- Registration fields (hidden by default) -->
+                        <div id="register-fields" class="hidden">
+                            <div class="form-group">
+                                <label for="auth-role">Platform Role</label>
+                                <select id="auth-role">
+                                    <option value="buyer">Buyer (Procure Parts)</option>
+                                    <option value="supplier">Supplier (Fulfill Bids)</option>
+                                </select>
+                            </div>
+
+                            <div id="supplier-register-fields" class="hidden">
+                                <div class="form-group">
+                                    <label for="supplier-name">Company Name</label>
+                                    <input type="text" id="supplier-name" placeholder="Apex Manufacturing LLC">
+                                </div>
+                                <div class="form-group">
+                                    <label>Manufacturing Capabilities</label>
+                                    <div class="checkbox-group">
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" name="capabilities" value="CNC Machining"> CNC Machining
+                                        </label>
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" name="capabilities" value="Sheet Metal"> Sheet Metal
+                                        </label>
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" name="capabilities" value="3D Printing"> 3D Printing
+                                        </label>
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" name="capabilities" value="Injection Molding"> Injection Molding
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group col">
+                                        <label for="supplier-leadtime">Base Lead Time (Days)</label>
+                                        <input type="number" id="supplier-leadtime" min="1" value="5">
+                                    </div>
+                                    <div class="form-group col">
+                                        <label for="supplier-capacity">Capacity Index (1-100)</label>
+                                        <input type="number" id="supplier-capacity" min="1" max="100" value="75">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group col">
+                                        <label for="supplier-rating">Rating (1.0-5.0)</label>
+                                        <input type="number" id="supplier-rating" min="1" max="5" step="0.1" value="4.5">
+                                    </div>
+                                    <div class="form-group col">
+                                        <label for="supplier-risk">Risk Score (0.0-1.0)</label>
+                                        <input type="number" id="supplier-risk" min="0" max="1" step="0.05" value="0.15">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="checkbox-label toggle-label">
+                                        <input type="checkbox" id="supplier-autobid" checked>
+                                        <span class="toggle-text">Enable AI Auto-Bidding (Auto-submit suggestions)</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" id="auth-submit-btn" class="btn btn-primary btn-block">Sign In</button>
+                    </form>
+                    
+                    <div class="quick-demo-section">
+                        <div class="divider"><span>OR QUICK DEMO</span></div>
+                        <div class="demo-buttons">
+                            <button id="demo-buyer" class="btn btn-secondary">Login as Demo Buyer</button>
+                            <button id="demo-supplier" class="btn btn-secondary">Login as Demo Supplier</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Dashboard Section (Logged In) -->
+        <section id="dashboard-section" class="dashboard-section hidden">
+            <!-- Sidebar / Nav -->
+            <aside class="dashboard-sidebar">
+                <nav class="sidebar-nav">
+                    <button class="nav-item active" id="nav-rfqs" data-panel="rfqs-panel">
+                        <span class="nav-icon">📁</span> RFQ Center
+                    </button>
+                    <button class="nav-item" id="nav-create-rfq" data-panel="create-rfq-panel">
+                        <span class="nav-icon">✚</span> Create RFQ
+                    </button>
+                    <button class="nav-item hidden" id="nav-supplier-settings" data-panel="supplier-settings-panel">
+                        <span class="nav-icon">⚙</span> Supplier Engine
+                    </button>
+                </nav>
+                <div class="connection-status">
+                    <span class="status-indicator offline" id="sse-indicator"></span>
+                    <span id="sse-text">Disconnected EventStream</span>
+                </div>
+            </aside>
+
+            <!-- Main Panel Content -->
+            <div class="dashboard-content">
+                <!-- RFQs Panel -->
+                <div id="rfqs-panel" class="dashboard-panel active">
+                    <div class="panel-header">
+                        <div>
+                            <h2 class="panel-title">Request for Quotes</h2>
+                            <p class="panel-subtitle" id="rfq-panel-subtitle">Manage and track your manufacturing procurement pipeline.</p>
+                        </div>
+                    </div>
+
+                    <div class="rfq-layout">
+                        <!-- RFQ List -->
+                        <div class="rfq-list-container">
+                            <div class="search-bar">
+                                <input type="text" id="rfq-search" placeholder="Search parts or RFQs...">
+                            </div>
+                            <div class="rfq-list" id="rfq-list-target">
+                                <!-- Dynamic RFQ cards -->
+                                <div class="empty-state">
+                                    <p>No RFQs found. Create a new request to get started.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- RFQ Details View -->
+                        <div class="rfq-details-view" id="rfq-details-target">
+                            <div class="details-empty-state">
+                                <span class="empty-icon">🔍</span>
+                                <h3>Select an RFQ</h3>
+                                <p>Select an RFQ from the list to view real-time matched suppliers, generated quotes, and AI-driven recommendations.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Create RFQ Panel -->
+                <div id="create-rfq-panel" class="dashboard-panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">Create Part RFQ</h2>
+                        <p class="panel-subtitle">Post procurement request and let the matching engine find eligible manufacturing partners.</p>
+                    </div>
+
+                    <div class="create-rfq-grid">
+                        <form id="create-rfq-form" class="create-rfq-form">
+                            <div class="form-section">
+                                <h3 class="section-title">Part Specifications</h3>
+                                <div class="form-group">
+                                    <label for="rfq-title">Request Title</label>
+                                    <input type="text" id="rfq-title" required placeholder="e.g., Al 6061 Enclosure Production Run">
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group col">
+                                        <label for="rfq-partname">Part Name / Drawing ID</label>
+                                        <input type="text" id="rfq-partname" required placeholder="e.g., ENC-982-REV4">
+                                    </div>
+                                    <div class="form-group col">
+                                        <label for="rfq-quantity">Target Quantity</label>
+                                        <input type="number" id="rfq-quantity" required min="1" value="250">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="rfq-capability">Required Capability</label>
+                                    <select id="rfq-capability" required>
+                                        <option value="CNC Machining">CNC Machining (Mill/Turn)</option>
+                                        <option value="Sheet Metal">Sheet Metal (Bending/Laser)</option>
+                                        <option value="3D Printing">3D Printing (SLA/SLS/FDM)</option>
+                                        <option value="Injection Molding">Injection Molding (Tooling)</option>
+                                    </select>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group col">
+                                        <label for="rfq-size">Dimensions / Size Spec</label>
+                                        <input type="text" id="rfq-size" placeholder="e.g., 120 x 85 x 40 mm">
+                                    </div>
+                                    <div class="form-group col">
+                                        <label for="rfq-material">Material Specification</label>
+                                        <input type="text" id="rfq-material" placeholder="e.g., Aluminum 6061-T6">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="rfq-notes">Additional Specs & Notes</label>
+                                    <textarea id="rfq-notes" rows="3" placeholder="Specify tolerances, surface finishes, threads, etc..."></textarea>
+                                </div>
+                            </div>
+
+                            <div class="form-section">
+                                <div class="priority-header-row">
+                                    <h3 class="section-title">Buyer Priorities (Weighted Optimization)</h3>
+                                    <span class="weight-total-badge" id="priority-weight-total">Sum: 100%</span>
+                                </div>
+                                <p class="section-subtitle">Auctom uses these weights to rank quotes using a multi-criteria normalization scoring model.</p>
+                                
+                                <div class="weight-sliders">
+                                    <div class="slider-container">
+                                        <div class="slider-labels">
+                                            <span class="slider-title">💰 Price / Cost Weight</span>
+                                            <span class="slider-value" id="weight-cost-val">33%</span>
+                                        </div>
+                                        <input type="range" id="weight-cost" min="0" max="100" value="33" class="weight-slider">
+                                    </div>
+                                    <div class="slider-container">
+                                        <div class="slider-labels">
+                                            <span class="slider-title">⚡ Lead Time Weight</span>
+                                            <span class="slider-value" id="weight-lead-val">33%</span>
+                                        </div>
+                                        <input type="range" id="weight-lead" min="0" max="100" value="33" class="weight-slider">
+                                    </div>
+                                    <div class="slider-container">
+                                        <div class="slider-labels">
+                                            <span class="slider-title">🛡 Supplier Risk Weight</span>
+                                            <span class="slider-value" id="weight-risk-val">34%</span>
+                                        </div>
+                                        <input type="range" id="weight-risk" min="0" max="100" value="34" class="weight-slider">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary btn-lg">Publish RFQ & Match Suppliers</button>
+                        </form>
+
+                        <div class="create-rfq-preview">
+                            <h3 class="preview-title">RFQ Preview Card</h3>
+                            <div class="preview-card">
+                                <div class="preview-header">
+                                    <span class="preview-cap-badge" id="preview-cap">CNC Machining</span>
+                                    <h4 id="preview-title-text">Al 6061 Enclosure Production Run</h4>
+                                </div>
+                                <div class="preview-specs">
+                                    <div class="preview-spec-item">
+                                        <span>Part Name:</span> <strong id="preview-part">ENC-982-REV4</strong>
+                                    </div>
+                                    <div class="preview-spec-item">
+                                        <span>Quantity:</span> <strong id="preview-qty">250 pcs</strong>
+                                    </div>
+                                    <div class="preview-spec-item">
+                                        <span>Material:</span> <span id="preview-mat">Aluminum 6061-T6</span>
+                                    </div>
+                                    <div class="preview-spec-item">
+                                        <span>Dimensions:</span> <span id="preview-size">120 x 85 x 40 mm</span>
+                                    </div>
+                                </div>
+                                <div class="preview-priorities">
+                                    <span>Priorities Breakdown:</span>
+                                    <div class="preview-bar-container">
+                                        <div class="preview-bar bar-cost" style="width: 33%" id="p-bar-cost">Cost (33%)</div>
+                                        <div class="preview-bar bar-lead" style="width: 33%" id="p-bar-lead">Lead (33%)</div>
+                                        <div class="preview-bar bar-risk" style="width: 34%" id="p-bar-risk">Risk (34%)</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Supplier Settings Panel -->
+                <div id="supplier-settings-panel" class="dashboard-panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">Supplier Profile & Bidding Engine</h2>
+                        <p class="panel-subtitle">Configure your auto-bidding preference and update capacity settings.</p>
+                    </div>
+
+                    <div class="supplier-settings-grid">
+                        <div class="settings-card">
+                            <h3 class="section-title">Bidding Behavior</h3>
+                            <div class="form-group toggle-wrapper">
+                                <div class="toggle-info">
+                                    <label for="settings-autobid" class="toggle-main-label">AI Auto-Bidding</label>
+                                    <p class="toggle-desc">If enabled, the Quote Generation Service will automatically submit suggested quotes as active bids. If disabled, suggestions remain in draft state for manual supplier review.</p>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" id="settings-autobid">
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+                            <button id="save-autobid-btn" class="btn btn-primary">Save Bidding Mode</button>
+                        </div>
+
+                        <div class="supplier-stats-card">
+                            <h3 class="section-title">Supplier Profile Stats</h3>
+                            <div class="supplier-profile-summary">
+                                <div class="stat-row">
+                                    <span>Company Name:</span>
+                                    <strong id="stat-company">Vertex 3D & Molding</strong>
+                                </div>
+                                <div class="stat-row">
+                                    <span>Capabilities:</span>
+                                    <span id="stat-capabilities" class="capabilities-badges">
+                                        <span class="cap-tag">3D Printing</span>
+                                        <span class="cap-tag">Injection Molding</span>
+                                    </span>
+                                </div>
+                                <div class="stat-row">
+                                    <span>Base Lead Time:</span>
+                                    <strong id="stat-lead">3 Days</strong>
+                                </div>
+                                <div class="stat-row">
+                                    <span>Rating:</span>
+                                    <strong id="stat-rating">⭐ 4.5 / 5.0</strong>
+                                </div>
+                                <div class="stat-row">
+                                    <span>Capacity Index:</span>
+                                    <strong id="stat-capacity">70%</strong>
+                                </div>
+                                <div class="stat-row">
+                                    <span>Calculated Risk:</span>
+                                    <strong id="stat-risk" class="risk-low">Low (10%)</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
