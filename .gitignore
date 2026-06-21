@@ -1,0 +1,38 @@
+# OS
+.DS_Store
+Thumbs.db
+.localized
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Go
+go-api/bin/
+go-api/vendor/
+go-api/server
+server
+*.exe
+*.test
+*.prof
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+venv/
+.venv/
+env/
+ENV/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# DB & Local / Docker
+db/data/
+db/pgdata/
+.env
+.env.local
