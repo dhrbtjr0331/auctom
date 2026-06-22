@@ -33,16 +33,20 @@ type LoginRequest struct {
 }
 
 type RegisterRequest struct {
-	Email         string   `json:"email"`
-	Password      string   `json:"password"`
-	Role          string   `json:"role"` // 'buyer' or 'supplier'
-	CompanyName   string   `json:"company_name,omitempty"`
-	Capabilities  []string `json:"capabilities,omitempty"`
-	CapacityIndex int      `json:"capacity_index,omitempty"`
-	Rating        float64  `json:"rating,omitempty"`
-	BaseLeadTime  int      `json:"base_lead_time,omitempty"`
-	RiskScore     float64  `json:"risk_score,omitempty"`
-	AutoBid       bool     `json:"auto_bid,omitempty"`
+	Email           string   `json:"email"`
+	Password        string   `json:"password"`
+	Role            string   `json:"role"` // 'buyer' or 'supplier'
+	CompanyName     string   `json:"company_name,omitempty"`
+	Capabilities    []string `json:"capabilities,omitempty"`
+	CapacityIndex   int      `json:"capacity_index,omitempty"`
+	Rating          float64  `json:"rating,omitempty"`
+	BaseLeadTime    int      `json:"base_lead_time,omitempty"`
+	RiskScore       float64  `json:"risk_score,omitempty"`
+	AutoBid         bool     `json:"auto_bid,omitempty"`
+	TargetMargin    *float64 `json:"target_margin,omitempty"`
+	UtilizationRate *float64 `json:"utilization_rate,omitempty"`
+	RiskTolerance   *float64 `json:"risk_tolerance,omitempty"`
+	AgentTier       *string  `json:"agent_tier,omitempty"`
 }
 
 type AuthResponse struct {
@@ -58,48 +62,59 @@ type UserResponse struct {
 
 // RFQ structures
 type RFQRequest struct {
-	Title              string  `json:"title"`
-	Description        string  `json:"description"`
-	PartName           string  `json:"part_name"`
-	Quantity           int     `json:"quantity"`
-	RequiredCapability string  `json:"required_capability"`
-	PriorityCost       float64 `json:"priority_cost"`
-	PriorityLeadTime   float64 `json:"priority_lead_time"`
-	PriorityRisk       float64 `json:"priority_risk"`
-	SpecSize           string  `json:"spec_size"`
-	SpecMaterial       string  `json:"spec_material"`
-	SpecNotes          string  `json:"spec_notes"`
+	Title              string   `json:"title"`
+	Description        string   `json:"description"`
+	PartName           string   `json:"part_name"`
+	Quantity           int      `json:"quantity"`
+	RequiredCapability string   `json:"required_capability"`
+	PriorityCost       float64  `json:"priority_cost"`
+	PriorityLeadTime   float64  `json:"priority_lead_time"`
+	PriorityRisk       float64  `json:"priority_risk"`
+	SpecSize           string   `json:"spec_size"`
+	SpecMaterial       string   `json:"spec_material"`
+	SpecNotes          string   `json:"spec_notes"`
+	AutoAwardMode      string   `json:"auto_award_mode"`
+	TargetBudget       *float64 `json:"target_budget,omitempty"`
+	MinScoreThreshold  float64  `json:"min_score_threshold"`
 }
 
 type RFQResponse struct {
-	ID                 string  `json:"id"`
-	BuyerID            string  `json:"buyer_id"`
-	Title              string  `json:"title"`
-	Description        string  `json:"description"`
-	PartName           string  `json:"part_name"`
-	Quantity           int     `json:"quantity"`
-	RequiredCapability string  `json:"required_capability"`
-	PriorityCost       float64 `json:"priority_cost"`
-	PriorityLeadTime   float64 `json:"priority_lead_time"`
-	PriorityRisk       float64 `json:"priority_risk"`
-	Status             string  `json:"status"`
-	AwardedQuoteID     *string `json:"awarded_quote_id,omitempty"`
-	SpecSize           string  `json:"spec_size"`
-	SpecMaterial       string  `json:"spec_material"`
-	SpecNotes          string  `json:"spec_notes"`
-	CreatedAt          string  `json:"created_at"`
+	ID                 string   `json:"id"`
+	BuyerID            string   `json:"buyer_id"`
+	Title              string   `json:"title"`
+	Description        string   `json:"description"`
+	PartName           string   `json:"part_name"`
+	Quantity           int      `json:"quantity"`
+	RequiredCapability string   `json:"required_capability"`
+	PriorityCost       float64  `json:"priority_cost"`
+	PriorityLeadTime   float64  `json:"priority_lead_time"`
+	PriorityRisk       float64  `json:"priority_risk"`
+	Status             string   `json:"status"`
+	AwardedQuoteID     *string  `json:"awarded_quote_id,omitempty"`
+	SpecSize           string   `json:"spec_size"`
+	SpecMaterial       string   `json:"spec_material"`
+	SpecNotes          string   `json:"spec_notes"`
+	CreatedAt          string   `json:"created_at"`
+	AutoAwardMode      string   `json:"auto_award_mode"`
+	TargetBudget       *float64 `json:"target_budget,omitempty"`
+	MinScoreThreshold  float64  `json:"min_score_threshold"`
 }
 
+
 type SupplierProfileResponse struct {
-	ID            string   `json:"id"`
-	UserID        string   `json:"user_id"`
-	CompanyName   string   `json:"company_name"`
-	Capabilities  []string `json:"capabilities"`
-	CapacityIndex int      `json:"capacity_index"`
-	Rating        float64  `json:"rating"`
-	BaseLeadTime  int      `json:"base_lead_time"`
-	RiskScore     float64  `json:"risk_score"`
-	AutoBid       bool     `json:"auto_bid"`
+	ID              string   `json:"id"`
+	UserID          string   `json:"user_id"`
+	CompanyName     string   `json:"company_name"`
+	Capabilities    []string `json:"capabilities"`
+	CapacityIndex   int      `json:"capacity_index"`
+	Rating          float64  `json:"rating"`
+	BaseLeadTime    int      `json:"base_lead_time"`
+	RiskScore       float64  `json:"risk_score"`
+	AutoBid         bool     `json:"auto_bid"`
+	TargetMargin    float64  `json:"target_margin"`
+	UtilizationRate float64  `json:"utilization_rate"`
+	RiskTolerance   float64  `json:"risk_tolerance"`
+	AgentTier       string   `json:"agent_tier"`
 }
 
 type QuoteResponse struct {
@@ -241,14 +256,27 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 		if req.BaseLeadTime < 1 {
 			req.BaseLeadTime = 7
 		}
-		if req.RiskScore < 0.0 {
-			req.RiskScore = 0.2
+		targetMargin := 0.20
+		if req.TargetMargin != nil {
+			targetMargin = *req.TargetMargin
+		}
+		utilizationRate := 0.50
+		if req.UtilizationRate != nil {
+			utilizationRate = *req.UtilizationRate
+		}
+		riskTolerance := 0.50
+		if req.RiskTolerance != nil {
+			riskTolerance = *req.RiskTolerance
+		}
+		agentTier := "freemium"
+		if req.AgentTier != nil {
+			agentTier = *req.AgentTier
 		}
 
 		_, err = tx.Exec(`
-			INSERT INTO supplier_profiles (user_id, company_name, capabilities, capacity_index, rating, base_lead_time, risk_score, auto_bid)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-			userID, req.CompanyName, pq.Array(req.Capabilities), req.CapacityIndex, req.Rating, req.BaseLeadTime, req.RiskScore, req.AutoBid)
+			INSERT INTO supplier_profiles (user_id, company_name, capabilities, capacity_index, rating, base_lead_time, risk_score, auto_bid, target_margin, utilization_rate, risk_tolerance, agent_tier)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+			userID, req.CompanyName, pq.Array(req.Capabilities), req.CapacityIndex, req.Rating, req.BaseLeadTime, req.RiskScore, req.AutoBid, targetMargin, utilizationRate, riskTolerance, agentTier)
 		if err != nil {
 			http.Error(w, `{"error": "Failed to create supplier profile: `+err.Error()+`"}`, http.StatusInternalServerError)
 			return
@@ -350,16 +378,24 @@ func (h *Handlers) CreateRFQ(w http.ResponseWriter, r *http.Request) {
 		req.PriorityRisk = 0.34
 	}
 
+	// Apply defaults for Phase 2 auto-award rules
+	if req.AutoAwardMode == "" {
+		req.AutoAwardMode = "disabled"
+	}
+	if req.MinScoreThreshold == 0 {
+		req.MinScoreThreshold = 0.8000
+	}
+
 	var rfq RFQResponse
 	var desc, size, mat, notes sql.NullString
 	var createdAtTime interface{}
 
 	err := h.DB.QueryRow(`
-		INSERT INTO rfqs (buyer_id, title, description, part_name, quantity, required_capability, priority_cost, priority_lead_time, priority_risk, status, spec_size, spec_material, spec_notes)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'created', $10, $11, $12)
-		RETURNING id, buyer_id, title, description, part_name, quantity, required_capability, priority_cost, priority_lead_time, priority_risk, status, awarded_quote_id, spec_size, spec_material, spec_notes, created_at`,
-		buyerID, req.Title, req.Description, req.PartName, req.Quantity, req.RequiredCapability, req.PriorityCost, req.PriorityLeadTime, req.PriorityRisk, req.SpecSize, req.SpecMaterial, req.SpecNotes).
-		Scan(&rfq.ID, &rfq.BuyerID, &rfq.Title, &desc, &rfq.PartName, &rfq.Quantity, &rfq.RequiredCapability, &rfq.PriorityCost, &rfq.PriorityLeadTime, &rfq.PriorityRisk, &rfq.Status, &rfq.AwardedQuoteID, &size, &mat, &notes, &createdAtTime)
+		INSERT INTO rfqs (buyer_id, title, description, part_name, quantity, required_capability, priority_cost, priority_lead_time, priority_risk, status, spec_size, spec_material, spec_notes, auto_award_mode, target_budget, min_score_threshold)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'created', $10, $11, $12, $13, $14, $15)
+		RETURNING id, buyer_id, title, description, part_name, quantity, required_capability, priority_cost, priority_lead_time, priority_risk, status, awarded_quote_id, spec_size, spec_material, spec_notes, created_at, auto_award_mode, target_budget, min_score_threshold`,
+		buyerID, req.Title, req.Description, req.PartName, req.Quantity, req.RequiredCapability, req.PriorityCost, req.PriorityLeadTime, req.PriorityRisk, req.SpecSize, req.SpecMaterial, req.SpecNotes, req.AutoAwardMode, req.TargetBudget, req.MinScoreThreshold).
+		Scan(&rfq.ID, &rfq.BuyerID, &rfq.Title, &desc, &rfq.PartName, &rfq.Quantity, &rfq.RequiredCapability, &rfq.PriorityCost, &rfq.PriorityLeadTime, &rfq.PriorityRisk, &rfq.Status, &rfq.AwardedQuoteID, &size, &mat, &notes, &createdAtTime, &rfq.AutoAwardMode, &rfq.TargetBudget, &rfq.MinScoreThreshold)
 
 	if err != nil {
 		slog.Error("Failed to insert RFQ", "error", err)
@@ -376,6 +412,7 @@ func (h *Handlers) CreateRFQ(w http.ResponseWriter, r *http.Request) {
 	} else {
 		rfq.CreatedAt = fmt.Sprintf("%v", createdAtTime)
 	}
+
 
 	slog.Info("RFQ created", "id", rfq.ID)
 	h.Broker.BroadcastEvent("rfq.created", rfq)
@@ -411,14 +448,14 @@ func (h *Handlers) GetRFQs(w http.ResponseWriter, r *http.Request) {
 
 	if role == "buyer" {
 		rows, err = h.DB.Query(`
-			SELECT id, buyer_id, title, description, part_name, quantity, required_capability, priority_cost, priority_lead_time, priority_risk, status, awarded_quote_id, spec_size, spec_material, spec_notes, created_at
+			SELECT id, buyer_id, title, description, part_name, quantity, required_capability, priority_cost, priority_lead_time, priority_risk, status, awarded_quote_id, spec_size, spec_material, spec_notes, created_at, auto_award_mode, target_budget, min_score_threshold
 			FROM rfqs
 			WHERE buyer_id = $1
 			ORDER BY created_at DESC`, userID)
 	} else {
 		// Supplier or other: show all RFQs
 		rows, err = h.DB.Query(`
-			SELECT id, buyer_id, title, description, part_name, quantity, required_capability, priority_cost, priority_lead_time, priority_risk, status, awarded_quote_id, spec_size, spec_material, spec_notes, created_at
+			SELECT id, buyer_id, title, description, part_name, quantity, required_capability, priority_cost, priority_lead_time, priority_risk, status, awarded_quote_id, spec_size, spec_material, spec_notes, created_at, auto_award_mode, target_budget, min_score_threshold
 			FROM rfqs
 			ORDER BY created_at DESC`)
 	}
@@ -436,7 +473,7 @@ func (h *Handlers) GetRFQs(w http.ResponseWriter, r *http.Request) {
 		var desc, size, mat, notes sql.NullString
 		var createdAtTime interface{}
 
-		err = rows.Scan(&rfq.ID, &rfq.BuyerID, &rfq.Title, &desc, &rfq.PartName, &rfq.Quantity, &rfq.RequiredCapability, &rfq.PriorityCost, &rfq.PriorityLeadTime, &rfq.PriorityRisk, &rfq.Status, &rfq.AwardedQuoteID, &size, &mat, &notes, &createdAtTime)
+		err = rows.Scan(&rfq.ID, &rfq.BuyerID, &rfq.Title, &desc, &rfq.PartName, &rfq.Quantity, &rfq.RequiredCapability, &rfq.PriorityCost, &rfq.PriorityLeadTime, &rfq.PriorityRisk, &rfq.Status, &rfq.AwardedQuoteID, &size, &mat, &notes, &createdAtTime, &rfq.AutoAwardMode, &rfq.TargetBudget, &rfq.MinScoreThreshold)
 		if err != nil {
 			slog.Error("Failed to scan RFQ row", "error", err)
 			continue
@@ -468,10 +505,10 @@ func (h *Handlers) GetRFQByID(w http.ResponseWriter, r *http.Request) {
 	var createdAtTime interface{}
 
 	err := h.DB.QueryRow(`
-		SELECT id, buyer_id, title, description, part_name, quantity, required_capability, priority_cost, priority_lead_time, priority_risk, status, awarded_quote_id, spec_size, spec_material, spec_notes, created_at
+		SELECT id, buyer_id, title, description, part_name, quantity, required_capability, priority_cost, priority_lead_time, priority_risk, status, awarded_quote_id, spec_size, spec_material, spec_notes, created_at, auto_award_mode, target_budget, min_score_threshold
 		FROM rfqs
 		WHERE id = $1`, rfqID).
-		Scan(&rfq.ID, &rfq.BuyerID, &rfq.Title, &desc, &rfq.PartName, &rfq.Quantity, &rfq.RequiredCapability, &rfq.PriorityCost, &rfq.PriorityLeadTime, &rfq.PriorityRisk, &rfq.Status, &rfq.AwardedQuoteID, &size, &mat, &notes, &createdAtTime)
+		Scan(&rfq.ID, &rfq.BuyerID, &rfq.Title, &desc, &rfq.PartName, &rfq.Quantity, &rfq.RequiredCapability, &rfq.PriorityCost, &rfq.PriorityLeadTime, &rfq.PriorityRisk, &rfq.Status, &rfq.AwardedQuoteID, &size, &mat, &notes, &createdAtTime, &rfq.AutoAwardMode, &rfq.TargetBudget, &rfq.MinScoreThreshold)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -573,6 +610,65 @@ func (h *Handlers) GetRFQByID(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (h *Handlers) performAward(rfqID string, quoteID string) error {
+	// Begin transaction to award the quote
+	tx, err := h.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Update RFQ status and awarded_quote_id
+	_, err = tx.Exec(`
+		UPDATE rfqs
+		SET status = 'awarded', awarded_quote_id = $1
+		WHERE id = $2`, quoteID, rfqID)
+	if err != nil {
+		slog.Error("Failed to update RFQ status in performAward", "rfq_id", rfqID, "quote_id", quoteID, "error", err)
+		return err
+	}
+
+	// Update selected quote's status to 'awarded'
+	_, err = tx.Exec(`
+		UPDATE quotes
+		SET status = 'awarded'
+		WHERE id = $1 AND rfq_id = $2`, quoteID, rfqID)
+	if err != nil {
+		slog.Error("Failed to update quote status to awarded in performAward", "quote_id", quoteID, "error", err)
+		return err
+	}
+
+	// Update other quotes for this RFQ to 'rejected'
+	_, err = tx.Exec(`
+		UPDATE quotes
+		SET status = 'rejected'
+		WHERE rfq_id = $1 AND id != $2`, rfqID, quoteID)
+	if err != nil {
+		slog.Error("Failed to reject other quotes in performAward", "rfq_id", rfqID, "error", err)
+		// We log the error but don't fail the whole transaction as it's secondary
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	slog.Info("RFQ awarded successfully", "rfq_id", rfqID, "quote_id", quoteID)
+
+	// Broadcast SSE updates
+	h.Broker.BroadcastEvent("rfq.status_updated", map[string]string{
+		"rfq_id":           rfqID,
+		"status":           "awarded",
+		"awarded_quote_id": quoteID,
+	})
+	h.Broker.BroadcastEvent("quote.status_updated", map[string]string{
+		"rfq_id":   rfqID,
+		"quote_id": quoteID,
+		"status":   "awarded",
+	})
+
+	return nil
+}
+
 // POST /api/rfqs/{id}/award
 func (h *Handlers) AwardRFQ(w http.ResponseWriter, r *http.Request) {
 	role := auth.GetUserRole(r.Context())
@@ -614,68 +710,15 @@ func (h *Handlers) AwardRFQ(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Begin transaction to award the quote
-	tx, err := h.DB.Begin()
-	if err != nil {
-		http.Error(w, `{"error": "Database error"}`, http.StatusInternalServerError)
+	if err := h.performAward(rfqID, req.QuoteID); err != nil {
+		http.Error(w, `{"error": "Failed to award RFQ: `+err.Error()+`"}`, http.StatusInternalServerError)
 		return
 	}
-	defer tx.Rollback()
-
-	// Update RFQ status and awarded_quote_id
-	_, err = tx.Exec(`
-		UPDATE rfqs
-		SET status = 'awarded', awarded_quote_id = $1
-		WHERE id = $2`, req.QuoteID, rfqID)
-	if err != nil {
-		slog.Error("Failed to award RFQ", "rfq_id", rfqID, "quote_id", req.QuoteID, "error", err)
-		http.Error(w, `{"error": "Failed to update RFQ status"}`, http.StatusInternalServerError)
-		return
-	}
-
-	// Update selected quote's status to 'awarded'
-	_, err = tx.Exec(`
-		UPDATE quotes
-		SET status = 'awarded'
-		WHERE id = $1 AND rfq_id = $2`, req.QuoteID, rfqID)
-	if err != nil {
-		slog.Error("Failed to update quote status to awarded", "quote_id", req.QuoteID, "error", err)
-		http.Error(w, `{"error": "Failed to update quote status"}`, http.StatusInternalServerError)
-		return
-	}
-
-	// Update other quotes for this RFQ to 'rejected'
-	_, err = tx.Exec(`
-		UPDATE quotes
-		SET status = 'rejected'
-		WHERE rfq_id = $1 AND id != $2`, rfqID, req.QuoteID)
-	if err != nil {
-		slog.Error("Failed to reject other quotes", "rfq_id", rfqID, "error", err)
-		// We log the error but don't fail the whole transaction as it's secondary
-	}
-
-	if err := tx.Commit(); err != nil {
-		http.Error(w, `{"error": "Transaction commit failed"}`, http.StatusInternalServerError)
-		return
-	}
-
-	slog.Info("RFQ awarded", "rfq_id", rfqID, "quote_id", req.QuoteID)
-
-	// Broadcast SSE updates
-	h.Broker.BroadcastEvent("rfq.status_updated", map[string]string{
-		"rfq_id":           rfqID,
-		"status":           "awarded",
-		"awarded_quote_id": req.QuoteID,
-	})
-	h.Broker.BroadcastEvent("quote.status_updated", map[string]string{
-		"rfq_id":   rfqID,
-		"quote_id": req.QuoteID,
-		"status":   "awarded",
-	})
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "RFQ successfully awarded"})
 }
+
 
 // POST /api/quotes/{id}/submit (Manual submit by supplier)
 func (h *Handlers) SubmitQuote(w http.ResponseWriter, r *http.Request) {
@@ -963,7 +1006,216 @@ func (h *Handlers) StatusCallback(w http.ResponseWriter, r *http.Request) {
 		"status": req.Status,
 	})
 
+	// Check auto-award rules if status is 'ranked'
+	if req.Status == "ranked" {
+		var autoAwardMode string
+		var targetBudget sql.NullFloat64
+		var minScoreThreshold float64
+
+		err := h.DB.QueryRow(`
+			SELECT auto_award_mode, target_budget, min_score_threshold 
+			FROM rfqs 
+			WHERE id = $1`, req.RFQID).Scan(&autoAwardMode, &targetBudget, &minScoreThreshold)
+		if err == nil {
+			if autoAwardMode == "instant" {
+				var topQuoteID string
+				var score float64
+				var totalPrice float64
+
+				err = h.DB.QueryRow(`
+					SELECT r.quote_id, r.score, q.total_price 
+					FROM recommendations r 
+					JOIN quotes q ON r.quote_id = q.id 
+					WHERE r.rfq_id = $1 AND r.rank = 1`, req.RFQID).Scan(&topQuoteID, &score, &totalPrice)
+				if err == nil {
+					budgetMet := true
+					if targetBudget.Valid && totalPrice > targetBudget.Float64 {
+						budgetMet = false
+					}
+
+					if score >= minScoreThreshold && budgetMet {
+						slog.Info("Auto-award triggered for RFQ", "rfq_id", req.RFQID, "quote_id", topQuoteID, "score", score, "total_price", totalPrice)
+						if err := h.performAward(req.RFQID, topQuoteID); err == nil {
+							w.Header().Set("Content-Type", "application/json")
+							w.WriteHeader(http.StatusOK)
+							json.NewEncoder(w).Encode(map[string]string{
+								"status":       "success",
+								"auto_award":   "true",
+								"winner_quote": topQuoteID,
+							})
+							return
+						} else {
+							slog.Error("Auto-award performAward failed", "rfq_id", req.RFQID, "quote_id", topQuoteID, "error", err)
+						}
+					} else {
+						slog.Info("RFQ did not meet auto-award criteria", "rfq_id", req.RFQID, "score", score, "min_score", minScoreThreshold, "total_price", totalPrice, "target_budget", targetBudget)
+					}
+				} else {
+					slog.Error("Failed to query top quote for auto-award check", "rfq_id", req.RFQID, "error", err)
+				}
+			}
+		} else {
+			slog.Error("Failed to query RFQ details for auto-award check", "rfq_id", req.RFQID, "error", err)
+		}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+}
+
+// GET /api/supplier/profile
+func (h *Handlers) GetSupplierProfile(w http.ResponseWriter, r *http.Request) {
+	userID := auth.GetUserID(r.Context())
+	role := auth.GetUserRole(r.Context())
+
+	if role != "supplier" {
+		http.Error(w, `{"error": "Unauthorized: Only suppliers have a profile"}`, http.StatusForbidden)
+		return
+	}
+
+	var sp SupplierProfileResponse
+	var capabilities []string
+	err := h.DB.QueryRow(`
+		SELECT id, user_id, company_name, capabilities, capacity_index, rating, base_lead_time, risk_score, auto_bid, target_margin, utilization_rate, risk_tolerance, agent_tier
+		FROM supplier_profiles
+		WHERE user_id = $1`, userID).Scan(
+		&sp.ID, &sp.UserID, &sp.CompanyName, pq.Array(&capabilities), &sp.CapacityIndex, &sp.Rating, &sp.BaseLeadTime, &sp.RiskScore, &sp.AutoBid, &sp.TargetMargin, &sp.UtilizationRate, &sp.RiskTolerance, &sp.AgentTier,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			http.Error(w, `{"error": "Profile not found"}`, http.StatusNotFound)
+		} else {
+			slog.Error("Failed to fetch supplier profile", "user_id", userID, "error", err)
+			http.Error(w, `{"error": "Database error"}`, http.StatusInternalServerError)
+		}
+		return
+	}
+	sp.Capabilities = capabilities
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(sp)
+}
+
+type UpdateSupplierProfileRequest struct {
+	AutoBid         *bool    `json:"auto_bid,omitempty"`
+	TargetMargin    *float64 `json:"target_margin,omitempty"`
+	UtilizationRate *float64 `json:"utilization_rate,omitempty"`
+	RiskTolerance   *float64 `json:"risk_tolerance,omitempty"`
+	AgentTier       *string  `json:"agent_tier,omitempty"`
+	CapacityIndex   *int     `json:"capacity_index,omitempty"`
+	BaseLeadTime    *int     `json:"base_lead_time,omitempty"`
+}
+
+// PUT /api/supplier/profile
+func (h *Handlers) UpdateSupplierProfile(w http.ResponseWriter, r *http.Request) {
+	userID := auth.GetUserID(r.Context())
+	role := auth.GetUserRole(r.Context())
+
+	if role != "supplier" {
+		http.Error(w, `{"error": "Unauthorized: Only suppliers can edit their profile"}`, http.StatusForbidden)
+		return
+	}
+
+	var req UpdateSupplierProfileRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, `{"error": "Invalid request body"}`, http.StatusBadRequest)
+		return
+	}
+
+	// Fetch current profile to merge/verify
+	var currentAutoBid bool
+	var currentTargetMargin, currentUtilizationRate, currentRiskTolerance float64
+	var currentAgentTier string
+	var currentCapacityIndex, currentBaseLeadTime int
+	err := h.DB.QueryRow(`
+		SELECT auto_bid, target_margin, utilization_rate, risk_tolerance, agent_tier, capacity_index, base_lead_time
+		FROM supplier_profiles
+		WHERE user_id = $1`, userID).Scan(&currentAutoBid, &currentTargetMargin, &currentUtilizationRate, &currentRiskTolerance, &currentAgentTier, &currentCapacityIndex, &currentBaseLeadTime)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			http.Error(w, `{"error": "Profile not found"}`, http.StatusNotFound)
+		} else {
+			slog.Error("Failed to fetch supplier profile for update", "user_id", userID, "error", err)
+			http.Error(w, `{"error": "Database error"}`, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Merge changes
+	autoBid := currentAutoBid
+	if req.AutoBid != nil {
+		autoBid = *req.AutoBid
+	}
+	targetMargin := currentTargetMargin
+	if req.TargetMargin != nil {
+		targetMargin = *req.TargetMargin
+	}
+	utilizationRate := currentUtilizationRate
+	if req.UtilizationRate != nil {
+		utilizationRate = *req.UtilizationRate
+	}
+	riskTolerance := currentRiskTolerance
+	if req.RiskTolerance != nil {
+		riskTolerance = *req.RiskTolerance
+	}
+	agentTier := currentAgentTier
+	if req.AgentTier != nil {
+		agentTier = *req.AgentTier
+	}
+	capacityIndex := currentCapacityIndex
+	if req.CapacityIndex != nil {
+		capacityIndex = *req.CapacityIndex
+	}
+	baseLeadTime := currentBaseLeadTime
+	if req.BaseLeadTime != nil {
+		baseLeadTime = *req.BaseLeadTime
+	}
+
+	// Validations
+	if targetMargin < 0.05 || targetMargin > 1.00 {
+		http.Error(w, `{"error": "Target margin must be between 5% and 100% (0.05 - 1.00)"}`, http.StatusBadRequest)
+		return
+	}
+	if utilizationRate < 0.00 || utilizationRate > 1.00 {
+		http.Error(w, `{"error": "Utilization rate must be between 0% and 100% (0.00 - 1.00)"}`, http.StatusBadRequest)
+		return
+	}
+	if riskTolerance < 0.00 || riskTolerance > 1.00 {
+		http.Error(w, `{"error": "Risk tolerance must be between 0.0 and 1.0"}`, http.StatusBadRequest)
+		return
+	}
+	if agentTier != "freemium" && agentTier != "premium" {
+		http.Error(w, `{"error": "Agent tier must be 'freemium' or 'premium'"}`, http.StatusBadRequest)
+		return
+	}
+
+	_, err = h.DB.Exec(`
+		UPDATE supplier_profiles
+		SET auto_bid = $1, target_margin = $2, utilization_rate = $3, risk_tolerance = $4, agent_tier = $5, capacity_index = $6, base_lead_time = $7
+		WHERE user_id = $8`,
+		autoBid, targetMargin, utilizationRate, riskTolerance, agentTier, capacityIndex, baseLeadTime, userID,
+	)
+	if err != nil {
+		slog.Error("Failed to update supplier profile", "user_id", userID, "error", err)
+		http.Error(w, `{"error": "Database update failed"}`, http.StatusInternalServerError)
+		return
+	}
+
+	// Fetch updated profile to return
+	var sp SupplierProfileResponse
+	var capabilities []string
+	err = h.DB.QueryRow(`
+		SELECT id, user_id, company_name, capabilities, capacity_index, rating, base_lead_time, risk_score, auto_bid, target_margin, utilization_rate, risk_tolerance, agent_tier
+		FROM supplier_profiles
+		WHERE user_id = $1`, userID).Scan(
+		&sp.ID, &sp.UserID, &sp.CompanyName, pq.Array(&capabilities), &sp.CapacityIndex, &sp.Rating, &sp.BaseLeadTime, &sp.RiskScore, &sp.AutoBid, &sp.TargetMargin, &sp.UtilizationRate, &sp.RiskTolerance, &sp.AgentTier,
+	)
+	if err == nil {
+		sp.Capabilities = capabilities
+		h.Broker.BroadcastEvent("supplier.profile_updated", sp)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(sp)
 }
