@@ -19,7 +19,9 @@ echo "[1/5] Initializing Database 'auctom'..."
 createdb auctom 2>/dev/null || echo "Database might already exist."
 psql -d auctom -f db/migrations/000001_init_schema.up.sql
 psql -d auctom -f db/migrations/000002_seed_data.up.sql
+psql -d auctom -f db/migrations/000003_add_buyer_auto_award.up.sql
 echo "Database schema and seed data applied!"
+
 echo ""
 
 # 2. Run Matching Service
