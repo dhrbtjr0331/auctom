@@ -139,6 +139,15 @@ function setupPrioritySliders() {
     rfqSize.addEventListener('input', (e) => previewSize.textContent = e.target.value || '-');
     rfqMaterial.addEventListener('input', (e) => previewMat.textContent = e.target.value || '-');
 
+    const minScoreSlider = document.getElementById('rfq-min-score');
+    const minScoreVal = document.getElementById('rfq-min-score-val');
+    if (minScoreSlider && minScoreVal) {
+        minScoreSlider.addEventListener('input', (e) => {
+            minScoreVal.textContent = `${e.target.value}%`;
+        });
+    }
+
+
     // Balancing three sliders
     let oldValues = {
         cost: parseInt(sliders.cost.value),
@@ -393,71 +402,106 @@ function logout() {
 // Load Supplier profile config
 async function loadSupplierProfile() {
     try {
-        const res = await fetch('/api/rfqs', { // Supplier sees general page containing info
+        const res = await fetch('/api/supplier/profile', {
             headers: { 'Authorization': `Bearer ${state.token}` }
         });
-        // We'll also call an endpoint to get the supplier statistics. Since GET /api/rfqs lists RFQs,
-        // let's fetch a list of RFQs. The Go API handles list, we'll extract supplier info if available
-        // on the frontend side or set values manually for demo. Let's load the checkbox states.
-        const userEmail = state.user.email;
-        // Seed default labels for Vertex, Apex, Global, Rapid based on login
+        if (!res.ok) {
+            throw new Error('Failed to load supplier profile');
+        }
+        const profile = await res.json();
+        
+        // Form controls
+        const settingsAutoBid = document.getElementById('settings-autobid');
+        const settingsAgentTier = document.getElementById('settings-agent-tier');
+        const settingsTargetMargin = document.getElementById('settings-target-margin');
+        const settingsUtilization = document.getElementById('settings-utilization');
+        const settingsRiskTolerance = document.getElementById('settings-risk-tolerance');
+
+        // Dynamic text outputs
+        const marginValue = document.getElementById('margin-value');
+        const utilizationValue = document.getElementById('utilization-value');
+        const riskToleranceValue = document.getElementById('risk-tolerance-value');
+
+        // Stats card elements
         const companyLabel = document.getElementById('stat-company');
+        const tierLabel = document.getElementById('stat-tier');
         const capabilitiesLabel = document.getElementById('stat-capabilities');
         const leadLabel = document.getElementById('stat-lead');
         const ratingLabel = document.getElementById('stat-rating');
         const capacityLabel = document.getElementById('stat-capacity');
         const riskLabel = document.getElementById('stat-risk');
 
-        if (userEmail.includes('supplier1')) {
-            companyLabel.textContent = 'Apex CNC Machining';
-            capabilitiesLabel.innerHTML = '<span class="cap-tag">CNC Machining</span><span class="cap-tag">Sheet Metal</span>';
-            leadLabel.textContent = '5 Days';
-            ratingLabel.textContent = '⭐ 4.8 / 5.0';
-            capacityLabel.textContent = '80%';
-            riskLabel.textContent = 'Low (15%)';
-            riskLabel.className = 'risk-low';
-            settingsAutoBid.checked = true;
-        } else if (userEmail.includes('supplier2')) {
-            companyLabel.textContent = 'Vertex 3D & Molding';
-            capabilitiesLabel.innerHTML = '<span class="cap-tag">3D Printing</span><span class="cap-tag">Injection Molding</span>';
-            leadLabel.textContent = '3 Days';
-            ratingLabel.textContent = '⭐ 4.5 / 5.0';
-            capacityLabel.textContent = '70%';
-            riskLabel.textContent = 'Low (10%)';
-            riskLabel.className = 'risk-low';
-            settingsAutoBid.checked = false;
-        } else if (userEmail.includes('supplier3')) {
-            companyLabel.textContent = 'Global Castings';
-            capabilitiesLabel.innerHTML = '<span class="cap-tag">CNC Machining</span><span class="cap-tag">Injection Molding</span>';
-            leadLabel.textContent = '10 Days';
-            ratingLabel.textContent = '⭐ 4.2 / 5.0';
-            capacityLabel.textContent = '90%';
-            riskLabel.textContent = 'Medium (30%)';
-            riskLabel.className = 'risk-med';
-            settingsAutoBid.checked = true;
-        } else if (userEmail.includes('supplier4')) {
-            companyLabel.textContent = 'Rapid Sheet Metal';
-            capabilitiesLabel.innerHTML = '<span class="cap-tag">Sheet Metal</span>';
-            leadLabel.textContent = '2 Days';
-            ratingLabel.textContent = '⭐ 4.9 / 5.0';
-            capacityLabel.textContent = '85%';
-            riskLabel.textContent = 'Very Low (5%)';
-            riskLabel.className = 'risk-low';
-            settingsAutoBid.checked = true;
-        } else {
-            // General Supplier
-            companyLabel.textContent = 'Registered Partner';
-            capabilitiesLabel.innerHTML = '<span class="cap-tag">General Manufacturing</span>';
-            leadLabel.textContent = '7 Days';
-            ratingLabel.textContent = '⭐ 4.0 / 5.0';
-            capacityLabel.textContent = '50%';
-            riskLabel.textContent = 'Low (20%)';
-            riskLabel.className = 'risk-low';
-            settingsAutoBid.checked = true;
-        }
+        // Populate controls
+        settingsAutoBid.checked = profile.auto_bid;
+        settingsAgentTier.value = profile.agent_tier;
+        settingsTargetMargin.value = profile.target_margin;
+        settingsUtilization.value = profile.utilization_rate;
+        settingsRiskTolerance.value = profile.risk_tolerance;
 
-        saveAutoBidBtn.onclick = () => {
-            showToast('AI Bidding settings updated successfully!', 'success');
+        // Set value displays
+        marginValue.textContent = `${Math.round(profile.target_margin * 100)}%`;
+        utilizationValue.textContent = `${Math.round(profile.utilization_rate * 100)}%`;
+        riskToleranceValue.textContent = profile.risk_tolerance.toFixed(2);
+
+        // Add input listeners for real-time text updates
+        settingsTargetMargin.oninput = (e) => {
+            marginValue.textContent = `${Math.round(e.target.value * 100)}%`;
+        };
+        settingsUtilization.oninput = (e) => {
+            utilizationValue.textContent = `${Math.round(e.target.value * 100)}%`;
+        };
+        settingsRiskTolerance.oninput = (e) => {
+            riskToleranceValue.textContent = parseFloat(e.target.value).toFixed(2);
+        };
+
+        // Populate stats card
+        companyLabel.textContent = profile.company_name;
+        tierLabel.textContent = profile.agent_tier === 'premium' ? 'Premium (Gemini AI)' : 'Freemium (Rules-Based)';
+        tierLabel.style.color = profile.agent_tier === 'premium' ? 'var(--accent-glow, #3b82f6)' : 'var(--primary)';
+        
+        capabilitiesLabel.innerHTML = (profile.capabilities || []).map(cap => `<span class="cap-tag">${cap}</span>`).join('');
+        leadLabel.textContent = `${profile.base_lead_time} Days`;
+        ratingLabel.textContent = `⭐ ${parseFloat(profile.rating).toFixed(1)} / 5.0`;
+        capacityLabel.textContent = `${profile.capacity_index}%`;
+        
+        const riskVal = parseFloat(profile.risk_score);
+        riskLabel.textContent = riskVal < 0.15 ? `Low (${Math.round(riskVal * 100)}%)` : (riskVal < 0.3 ? `Medium (${Math.round(riskVal * 100)}%)` : `High (${Math.round(riskVal * 100)}%)`);
+        riskLabel.className = riskVal < 0.15 ? 'risk-low' : (riskVal < 0.3 ? 'risk-med' : 'risk-high');
+
+        saveAutoBidBtn.onclick = async () => {
+            try {
+                const payload = {
+                    auto_bid: settingsAutoBid.checked,
+                    agent_tier: settingsAgentTier.value,
+                    target_margin: parseFloat(settingsTargetMargin.value),
+                    utilization_rate: parseFloat(settingsUtilization.value),
+                    risk_tolerance: parseFloat(settingsRiskTolerance.value)
+                };
+
+                const updateRes = await fetch('/api/supplier/profile', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${state.token}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!updateRes.ok) {
+                    const errData = await updateRes.json();
+                    throw new Error(errData.error || 'Failed to update profile settings');
+                }
+
+                const updatedProfile = await updateRes.json();
+                
+                // Refresh displays with updated data
+                tierLabel.textContent = updatedProfile.agent_tier === 'premium' ? 'Premium (Gemini AI)' : 'Freemium (Rules-Based)';
+                tierLabel.style.color = updatedProfile.agent_tier === 'premium' ? 'var(--accent-glow, #3b82f6)' : 'var(--primary)';
+                
+                showToast('Supplier Strategy & Bidding parameters updated successfully!', 'success');
+            } catch (err) {
+                showToast(err.message, 'danger');
+            }
         };
 
     } catch (e) {
@@ -481,6 +525,11 @@ async function handleCreateRFQSubmit(e) {
     const priorityLeadTime = parseFloat(weightLeadSlider.value) / 100;
     const priorityRisk = parseFloat(weightRiskSlider.value) / 100;
 
+    const autoAwardMode = document.getElementById('rfq-auto-award-mode').value;
+    const targetBudgetVal = document.getElementById('rfq-target-budget').value;
+    const targetBudget = targetBudgetVal ? parseFloat(targetBudgetVal) : null;
+    const minScoreThreshold = parseFloat(document.getElementById('rfq-min-score').value) / 100;
+
     const payload = {
         title,
         part_name: partName,
@@ -491,7 +540,10 @@ async function handleCreateRFQSubmit(e) {
         spec_notes: specNotes,
         priority_cost: priorityCost,
         priority_lead_time: priorityLeadTime,
-        priority_risk: priorityRisk
+        priority_risk: priorityRisk,
+        auto_award_mode: autoAwardMode,
+        target_budget: targetBudget,
+        min_score_threshold: minScoreThreshold
     };
 
     try {
@@ -661,10 +713,21 @@ function renderRFQDetails(detail) {
             <div class="meta-item">
                 <span class="meta-label">Material Spec</span>
                 <span class="meta-val">${escapeHTML(rfq.spec_material) || 'Standard'}</span>
-            </div>
             <div class="meta-item">
                 <span class="meta-label">Dimensions</span>
                 <span class="meta-val">${escapeHTML(rfq.spec_size) || 'Not specified'}</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">Auto-Award Mode</span>
+                <span class="meta-val" style="text-transform: capitalize;">${escapeHTML(rfq.auto_award_mode || 'disabled')}</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">Target Budget</span>
+                <span class="meta-val">${rfq.target_budget ? '$' + rfq.target_budget.toLocaleString() : 'None'}</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">Min Score Threshold</span>
+                <span class="meta-val">${rfq.min_score_threshold ? Math.round(rfq.min_score_threshold * 100) : 80}%</span>
             </div>
         </div>
     `;
@@ -791,6 +854,16 @@ function renderStepExplanations(rfq, matches, quotes, recommendations) {
                             // Find the raw quote details
                             const quote = quotes.find(q => q.id === rec.quote_id) || {};
                             
+                            // Check if eligible for One-Click Approval
+                            let isOneClickEligible = false;
+                            if (isWinner && !isRFQAlreadyAwarded && rfq.auto_award_mode === 'one-click') {
+                                const meetsScore = rec.score >= (rfq.min_score_threshold || 0.80);
+                                const meetsBudget = !rfq.target_budget || quote.total_price <= rfq.target_budget;
+                                if (meetsScore && meetsBudget) {
+                                    isOneClickEligible = true;
+                                }
+                            }
+
                             let cardClass = `rec-card`;
                             if (isWinner && !isRFQAlreadyAwarded) cardClass += ' winner';
                             if (isThisAwardedQuote) cardClass += ' awarded-winner';
@@ -800,7 +873,8 @@ function renderStepExplanations(rfq, matches, quotes, recommendations) {
                                     <div class="rec-rank-circle">${rec.rank}</div>
                                     <div class="rec-company-col">
                                         <span class="rec-company-name">${escapeHTML(rec.company_name)}</span>
-                                        ${isWinner && !isRFQAlreadyAwarded ? '<span class="winner-badge">Top Recommendation</span>' : ''}
+                                        ${isWinner && !isRFQAlreadyAwarded && !isOneClickEligible ? '<span class="winner-badge">Top Recommendation</span>' : ''}
+                                        ${isOneClickEligible ? '<span class="winner-badge" style="background-color: #10B981; color: white;">⚡ One-Click Approve</span>' : ''}
                                         ${isThisAwardedQuote ? '<span class="winner-badge" style="background-color: var(--success); color: white;">Awarded Contract</span>' : ''}
                                     </div>
                                     <div class="rec-metric-col">
@@ -824,8 +898,8 @@ function renderStepExplanations(rfq, matches, quotes, recommendations) {
                                     </div>
                                     <div>
                                         ${!isRFQAlreadyAwarded ? `
-                                            <button class="btn btn-primary btn-sm award-contract-btn" data-quote-id="${rec.quote_id}">
-                                                Award
+                                            <button class="btn ${isOneClickEligible ? 'btn-success' : 'btn-primary'} btn-sm award-contract-btn" data-quote-id="${rec.quote_id}" ${isOneClickEligible ? 'style="background-color: #10B981; border-color: #10B981; box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);"' : ''}>
+                                                ${isOneClickEligible ? '⚡ Approve' : 'Award'}
                                             </button>
                                         ` : (isThisAwardedQuote ? `
                                             <span style="color: var(--success); font-weight: 700; font-size: 0.9rem;">Selected ✓</span>

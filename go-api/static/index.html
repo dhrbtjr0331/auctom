@@ -266,6 +266,32 @@
                                 </div>
                             </div>
 
+                            <div class="form-section">
+                                <h3 class="section-title">Bidding Autonomy & Auto-Award</h3>
+                                <p class="section-subtitle">Define guardrails for autonomous procurement and quote acceptance.</p>
+                                <div class="form-group">
+                                    <label for="rfq-auto-award-mode">Auto-Award Mode</label>
+                                    <select id="rfq-auto-award-mode" required>
+                                        <option value="disabled">Disabled (Manual Review Required)</option>
+                                        <option value="instant">Instant Auto-Award (Strict)</option>
+                                        <option value="one-click">One-Click Approval Badge</option>
+                                    </select>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group col">
+                                        <label for="rfq-target-budget">Target Budget ($)</label>
+                                        <input type="number" id="rfq-target-budget" min="1" placeholder="e.g. 5000 (Optional)">
+                                    </div>
+                                    <div class="form-group col">
+                                        <label for="rfq-min-score">Min Recommendation Score (%)</label>
+                                        <div style="display: flex; align-items: center; gap: 10px;">
+                                            <input type="range" id="rfq-min-score" min="0" max="100" value="80" style="flex: 1;">
+                                            <span id="rfq-min-score-val" style="min-width: 40px; font-weight: 600;">80%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <button type="submit" class="btn btn-primary btn-lg">Publish RFQ & Match Suppliers</button>
                         </form>
 
@@ -312,18 +338,43 @@
 
                     <div class="supplier-settings-grid">
                         <div class="settings-card">
-                            <h3 class="section-title">Bidding Behavior</h3>
-                            <div class="form-group toggle-wrapper">
+                            <h3 class="section-title">Bidding Behavior & Strategies</h3>
+                            
+                            <div class="form-group toggle-wrapper" style="margin-bottom: 1.5rem;">
                                 <div class="toggle-info">
                                     <label for="settings-autobid" class="toggle-main-label">AI Auto-Bidding</label>
-                                    <p class="toggle-desc">If enabled, the Quote Generation Service will automatically submit suggested quotes as active bids. If disabled, suggestions remain in draft state for manual supplier review.</p>
+                                    <p class="toggle-desc" style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.2rem;">If enabled, the Quote Generation Service will automatically submit suggested quotes as active bids. If disabled, suggestions remain in draft state for manual supplier review.</p>
                                 </div>
                                 <label class="switch">
                                     <input type="checkbox" id="settings-autobid">
                                     <span class="slider round"></span>
                                 </label>
                             </div>
-                            <button id="save-autobid-btn" class="btn btn-primary">Save Bidding Mode</button>
+
+                            <div class="form-group" style="margin-bottom: 1.2rem;">
+                                <label for="settings-agent-tier" class="form-label" style="display: block; font-weight: 500; margin-bottom: 0.4rem;">Agent Strategic Intelligence Tier</label>
+                                <select id="settings-agent-tier" class="form-control" style="background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color); padding: 0.6rem; border-radius: 8px; width: 100%;">
+                                    <option value="freemium">Freemium (Rules-Based Math Agent)</option>
+                                    <option value="premium">Premium (Gemini AI Curated Agent)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group" style="margin-bottom: 1.2rem;">
+                                <label for="settings-target-margin" class="form-label" style="display: block; font-weight: 500; margin-bottom: 0.4rem;">Target Profit Margin: <span id="margin-value" style="color: var(--primary); font-weight: 600;">20%</span></label>
+                                <input type="range" id="settings-target-margin" min="0.05" max="1.00" step="0.01" value="0.20" class="slider-input" style="width: 100%; accent-color: var(--primary);">
+                            </div>
+
+                            <div class="form-group" style="margin-bottom: 1.2rem;">
+                                <label for="settings-utilization" class="form-label" style="display: block; font-weight: 500; margin-bottom: 0.4rem;">Current Machine Utilization: <span id="utilization-value" style="color: var(--primary); font-weight: 600;">50%</span></label>
+                                <input type="range" id="settings-utilization" min="0.00" max="1.00" step="0.01" value="0.50" class="slider-input" style="width: 100%; accent-color: var(--primary);">
+                            </div>
+
+                            <div class="form-group" style="margin-bottom: 1.5rem;">
+                                <label for="settings-risk-tolerance" class="form-label" style="display: block; font-weight: 500; margin-bottom: 0.4rem;">Supplier Risk Tolerance: <span id="risk-tolerance-value" style="color: var(--primary); font-weight: 600;">0.50</span></label>
+                                <input type="range" id="settings-risk-tolerance" min="0.00" max="1.00" step="0.01" value="0.50" class="slider-input" style="width: 100%; accent-color: var(--primary);">
+                            </div>
+
+                            <button id="save-autobid-btn" class="btn btn-primary" style="width: 100%;">Save Strategy & Settings</button>
                         </div>
 
                         <div class="supplier-stats-card">
@@ -332,6 +383,10 @@
                                 <div class="stat-row">
                                     <span>Company Name:</span>
                                     <strong id="stat-company">Vertex 3D & Molding</strong>
+                                </div>
+                                <div class="stat-row">
+                                    <span>Agent Intelligence:</span>
+                                    <strong id="stat-tier" style="color: var(--primary); text-transform: capitalize;">Freemium</strong>
                                 </div>
                                 <div class="stat-row">
                                     <span>Capabilities:</span>
