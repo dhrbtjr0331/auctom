@@ -119,6 +119,9 @@ func main() {
 		r.Post("/api/rfqs/{id}/award", h.AwardRFQ)
 
 		r.Post("/api/quotes/{id}/submit", h.SubmitQuote)
+
+		r.Get("/api/supplier/profile", h.GetSupplierProfile)
+		r.Put("/api/supplier/profile", h.UpdateSupplierProfile)
 	})
 
 	// Setup static files directory & fallback index.html if not present
