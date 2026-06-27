@@ -415,7 +415,7 @@ func (h *Handlers) CreateRFQ(w http.ResponseWriter, r *http.Request) {
 
 
 	slog.Info("RFQ created", "id", rfq.ID)
-	h.Broker.BroadcastEvent("rfq.created", rfq)
+	h.Broker.BroadcastEvent("rfq.created", rfq, rfq.BuyerID)
 
 	// Transition to matching status and trigger Matching service
 	_, err = h.DB.Exec(`UPDATE rfqs SET status = 'matching' WHERE id = $1`, rfq.ID)
@@ -426,7 +426,7 @@ func (h *Handlers) CreateRFQ(w http.ResponseWriter, r *http.Request) {
 		h.Broker.BroadcastEvent("rfq.status_updated", map[string]string{
 			"rfq_id": rfq.ID,
 			"status": "matching",
-		})
+		}, rfq.BuyerID)
 	}
 
 	h.triggerService(h.MatchingServiceURL, "/webhook/rfq-created", map[string]interface{}{
@@ -655,16 +655,17 @@ func (h *Handlers) performAward(rfqID string, quoteID string) error {
 	slog.Info("RFQ awarded successfully", "rfq_id", rfqID, "quote_id", quoteID)
 
 	// Broadcast SSE updates
+	associatedUsers := h.getRFQAssociatedUserIDs(rfqID)
 	h.Broker.BroadcastEvent("rfq.status_updated", map[string]string{
 		"rfq_id":           rfqID,
 		"status":           "awarded",
 		"awarded_quote_id": quoteID,
-	})
+	}, associatedUsers...)
 	h.Broker.BroadcastEvent("quote.status_updated", map[string]string{
 		"rfq_id":   rfqID,
 		"quote_id": quoteID,
 		"status":   "awarded",
-	})
+	}, associatedUsers...)
 
 	return nil
 }
@@ -760,11 +761,12 @@ func (h *Handlers) SubmitQuote(w http.ResponseWriter, r *http.Request) {
 	}
 
 	slog.Info("Quote submitted manually", "quote_id", quoteID)
+	quoteUsers := h.getQuoteAssociatedUserIDs(quoteID)
 	h.Broker.BroadcastEvent("quote.status_updated", map[string]string{
 		"rfq_id":   rfqID,
 		"quote_id": quoteID,
 		"status":   "submitted",
-	})
+	}, quoteUsers...)
 
 	// Trigger recommender service to recalculate recommendations based on new submitted quote
 	h.triggerService(h.RecommenderServiceURL, "/recommend", map[string]interface{}{
@@ -829,10 +831,11 @@ func (h *Handlers) WebhookDispatcher(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		associatedUsers := h.getRFQAssociatedUserIDs(matchData.RFQID)
 		h.Broker.BroadcastEvent("rfq.status_updated", map[string]string{
 			"rfq_id": matchData.RFQID,
 			"status": "matched",
-		})
+		}, associatedUsers...)
 
 		// Trigger Quote generation service
 		h.triggerService(h.QuoteServiceURL, "/generate-quotes", map[string]interface{}{
@@ -897,13 +900,14 @@ func (h *Handlers) WebhookDispatcher(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		associatedUsers := h.getRFQAssociatedUserIDs(quoteData.RFQID)
 		h.Broker.BroadcastEvent("rfq.status_updated", map[string]string{
 			"rfq_id": quoteData.RFQID,
 			"status": "quotes_generated",
-		})
+		}, associatedUsers...)
 		h.Broker.BroadcastEvent("quotes.generated", map[string]string{
 			"rfq_id": quoteData.RFQID,
-		})
+		}, associatedUsers...)
 
 		// Trigger Recommender service
 		h.triggerService(h.RecommenderServiceURL, "/recommend", map[string]interface{}{
@@ -953,13 +957,14 @@ func (h *Handlers) WebhookDispatcher(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		associatedUsers := h.getRFQAssociatedUserIDs(rankData.RFQID)
 		h.Broker.BroadcastEvent("rfq.status_updated", map[string]string{
 			"rfq_id": rankData.RFQID,
 			"status": "ranked",
-		})
+		}, associatedUsers...)
 		h.Broker.BroadcastEvent("rfq.ranked", map[string]string{
 			"rfq_id": rankData.RFQID,
-		})
+		}, associatedUsers...)
 
 	default:
 		slog.Warn("Unhandled webhook event", "event", payload.Event)
@@ -1001,10 +1006,11 @@ func (h *Handlers) StatusCallback(w http.ResponseWriter, r *http.Request) {
 	slog.Info("RFQ status updated via microservice callback", "rfq_id", req.RFQID, "status", req.Status)
 
 	// Broadcast event to SSE clients
+	associatedUsers := h.getRFQAssociatedUserIDs(req.RFQID)
 	h.Broker.BroadcastEvent("rfq.status_updated", map[string]string{
 		"rfq_id": req.RFQID,
 		"status": req.Status,
-	})
+	}, associatedUsers...)
 
 	// Check auto-award rules if status is 'ranked'
 	if req.Status == "ranked" {
@@ -1213,9 +1219,50 @@ func (h *Handlers) UpdateSupplierProfile(w http.ResponseWriter, r *http.Request)
 	)
 	if err == nil {
 		sp.Capabilities = capabilities
-		h.Broker.BroadcastEvent("supplier.profile_updated", sp)
+		h.Broker.BroadcastEvent("supplier.profile_updated", sp, sp.UserID)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(sp)
+}
+
+func (h *Handlers) getRFQAssociatedUserIDs(rfqID string) []string {
+	var buyerID string
+	err := h.DB.QueryRow(`SELECT buyer_id FROM rfqs WHERE id = $1`, rfqID).Scan(&buyerID)
+	if err != nil {
+		slog.Error("Failed to fetch RFQ buyer ID for SSE targeting", "rfq_id", rfqID, "error", err)
+		return nil
+	}
+	userIDs := []string{buyerID}
+
+	rows, err := h.DB.Query(`
+		SELECT sp.user_id 
+		FROM rfq_matches rm 
+		JOIN supplier_profiles sp ON rm.supplier_id = sp.id 
+		WHERE rm.rfq_id = $1`, rfqID)
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var sUserID string
+			if err := rows.Scan(&sUserID); err == nil {
+				userIDs = append(userIDs, sUserID)
+			}
+		}
+	}
+	return userIDs
+}
+
+func (h *Handlers) getQuoteAssociatedUserIDs(quoteID string) []string {
+	var buyerID, supplierUserID string
+	err := h.DB.QueryRow(`
+		SELECT r.buyer_id, sp.user_id 
+		FROM quotes q 
+		JOIN rfqs r ON q.rfq_id = r.id 
+		JOIN supplier_profiles sp ON q.supplier_id = sp.id 
+		WHERE q.id = $1`, quoteID).Scan(&buyerID, &supplierUserID)
+	if err != nil {
+		slog.Error("Failed to fetch Quote associated user IDs for SSE targeting", "quote_id", quoteID, "error", err)
+		return nil
+	}
+	return []string{buyerID, supplierUserID}
 }
