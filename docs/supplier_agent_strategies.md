@@ -1,4 +1,4 @@
-# Walkthrough: Supplier Agent Strategies & Freemium vs. Premium Quoting
+# Supplier Agent Strategies & Freemium vs. Premium Quoting
 
 Implemented Phase 1 of the Auctom Product Roadmap: transitioned the supplier's auto-bidding engine from simple randomized numbers into a strategic bidding assistant supporting Freemium (Rules-Based Math Agent) and Premium (Gemini AI Curated Agent) modes.
 

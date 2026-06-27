@@ -1,4 +1,4 @@
-# Walkthrough - Phase 2: Buyer Auto-Award Rules & Guardrails
+# Buyer Auto-Award Rules & Guardrails
 
 We have successfully implemented **Phase 2: Buyer Auto-Award Rules & Guardrails** on the new git branch `feature/buyer-auto-award-rules` and submitted a Pull Request: [PR #3 on GitHub](https://github.com/dhrbtjr0331/auctom/pull/3).
 
