@@ -57,7 +57,13 @@ CREATE TABLE IF NOT EXISTS quotes (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-ALTER TABLE rfqs ADD CONSTRAINT fk_awarded_quote FOREIGN KEY (awarded_quote_id) REFERENCES quotes(id) ON DELETE SET NULL;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_awarded_quote') THEN
+        ALTER TABLE rfqs ADD CONSTRAINT fk_awarded_quote FOREIGN KEY (awarded_quote_id) REFERENCES quotes(id) ON DELETE SET NULL;
+    END IF;
+END;
+$$;
 
 CREATE TABLE IF NOT EXISTS recommendations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
