@@ -1092,8 +1092,8 @@ function connectSSE() {
     disconnectSSE();
 
     // Connect to SSE stream
-    const url = `/api/sse`;
-    slog('Connecting to EventStream...', url);
+    const url = `/api/sse?token=${encodeURIComponent(state.token)}`;
+    slog('Connecting to EventStream...', `/api/sse?token=...`);
     state.sseSource = new EventSource(url);
 
     state.sseSource.onopen = () => {

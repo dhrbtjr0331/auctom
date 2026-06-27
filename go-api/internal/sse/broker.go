@@ -6,22 +6,39 @@ import (
 	"log/slog"
 	"net/http"
 	"sync"
+
+	"auctom/go-api/internal/auth"
 )
+
+type ClientInfo struct {
+	UserID string
+	Role   string
+}
+
+type clientRegister struct {
+	ch   chan []byte
+	info ClientInfo
+}
+
+type broadcastMessage struct {
+	payload      []byte
+	targetUsers  map[string]bool // If empty, broadcast to all
+}
 
 type Broker struct {
 	mu         sync.RWMutex
-	clients    map[chan []byte]bool
-	connect    chan chan []byte
+	clients    map[chan []byte]ClientInfo
+	connect    chan clientRegister
 	disconnect chan chan []byte
-	broadcast  chan []byte
+	broadcast  chan broadcastMessage
 }
 
 func NewBroker() *Broker {
 	return &Broker{
-		clients:    make(map[chan []byte]bool),
-		connect:    make(chan chan []byte),
+		clients:    make(map[chan []byte]ClientInfo),
+		connect:    make(chan clientRegister),
 		disconnect: make(chan chan []byte),
-		broadcast:  make(chan []byte),
+		broadcast:  make(chan broadcastMessage),
 	}
 }
 
@@ -29,11 +46,11 @@ func (b *Broker) Start() {
 	slog.Info("SSE broker started")
 	for {
 		select {
-		case s := <-b.connect:
+		case reg := <-b.connect:
 			b.mu.Lock()
-			b.clients[s] = true
+			b.clients[reg.ch] = reg.info
 			b.mu.Unlock()
-			slog.Info("New SSE client registered")
+			slog.Info("New SSE client registered", "user_id", reg.info.UserID, "role", reg.info.Role)
 		case s := <-b.disconnect:
 			b.mu.Lock()
 			if _, ok := b.clients[s]; ok {
@@ -44,9 +61,13 @@ func (b *Broker) Start() {
 			b.mu.Unlock()
 		case msg := <-b.broadcast:
 			b.mu.RLock()
-			for s := range b.clients {
+			for s, info := range b.clients {
+				// Filter: if targetUsers is not empty, only send if user is in targetUsers
+				if len(msg.targetUsers) > 0 && !msg.targetUsers[info.UserID] {
+					continue
+				}
 				select {
-				case s <- msg:
+				case s <- msg.payload:
 				default:
 					// Don't block if client is slow
 				}
@@ -56,7 +77,7 @@ func (b *Broker) Start() {
 	}
 }
 
-func (b *Broker) BroadcastEvent(eventType string, data interface{}) {
+func (b *Broker) BroadcastEvent(eventType string, data interface{}, targetUserIDs ...string) {
 	payload := map[string]interface{}{
 		"event": eventType,
 		"data":  data,
@@ -66,9 +87,16 @@ func (b *Broker) BroadcastEvent(eventType string, data interface{}) {
 		slog.Error("Failed to marshal SSE payload", "error", err)
 		return
 	}
-	// Safely send to broadcast chan without blocking if broker is not running yet
+
+	targets := make(map[string]bool)
+	for _, id := range targetUserIDs {
+		if id != "" {
+			targets[id] = true
+		}
+	}
+
 	select {
-	case b.broadcast <- bytes:
+	case b.broadcast <- broadcastMessage{payload: bytes, targetUsers: targets}:
 	default:
 		slog.Warn("Broker broadcast channel full or not running, event dropped")
 	}
@@ -81,12 +109,33 @@ func (b *Broker) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Read token from query parameters
+	tokenStr := r.URL.Query().Get("token")
+	var clientInfo ClientInfo
+
+	if tokenStr != "" {
+		claims, err := auth.ValidateToken(tokenStr)
+		if err == nil {
+			clientInfo.UserID = claims.UserID
+			clientInfo.Role = claims.Role
+		} else {
+			slog.Warn("SSE connection failed JWT validation", "error", err)
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+	} else {
+		slog.Warn("SSE connection missing token query param")
+		http.Error(w, "Unauthorized: token required", http.StatusUnauthorized)
+		return
+	}
+
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	messageChan := make(chan []byte, 10)
-	b.connect <- messageChan
+	b.connect <- clientRegister{ch: messageChan, info: clientInfo}
 
 	defer func() {
 		b.disconnect <- messageChan
