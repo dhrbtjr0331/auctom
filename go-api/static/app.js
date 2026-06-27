@@ -7,6 +7,26 @@ let state = {
     sseSource: null
 };
 
+// Intercept all fetch requests to handle 401 Unauthorized globally
+const originalFetch = window.fetch;
+window.fetch = async function (url, options = {}) {
+    try {
+        const response = await originalFetch(url, options);
+        if (response.status === 401) {
+            // Exclude authentication endpoints to prevent loops/errors on incorrect credentials login/registration
+            const isAuthEndpoint = typeof url === 'string' && (url.includes('/api/auth/login') || url.includes('/api/auth/register'));
+            if (!isAuthEndpoint) {
+                slogError('Unauthorized (401) response detected, logging out');
+                logout();
+            }
+        }
+        return response;
+    } catch (err) {
+        slogError('Fetch interceptor error', err.message);
+        throw err;
+    }
+};
+
 // DOM Elements
 const authSection = document.getElementById('auth-section');
 const dashboardSection = document.getElementById('dashboard-section');
@@ -387,6 +407,12 @@ function showDashboard() {
     // Connect SSE and load RFQs
     connectSSE();
     loadRFQs();
+
+    // Reset navigation tab to RFQ Center to avoid stale active panel states on login/switch
+    const navRFQs = document.getElementById('nav-rfqs');
+    if (navRFQs) {
+        navRFQs.click();
+    }
 }
 
 function logout() {
